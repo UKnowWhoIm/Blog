@@ -4,47 +4,90 @@
     {%load blogextras%}
     <head>
         <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+        <link rel="stylesheet" href="{%static 'style.css'%}"/>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
         <title>Blog</title>
         <style>
-            
+           
+            h3{
+                font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+            }
+            .blockedlike{
+                padding:  10px 20px;
+                background-color: grey;
+                cursor: pointer;
+            }
+            .admin-item{
+                cursor: pointer;
+                padding: 5px 5px;
+            }
+            .admin-item:hover{
+                text-decoration: underline;
+            }
+            .adminpanel{
+                padding: 10px 10px;
+            }
+            .Liked{
+                background-color: grey;
+            }
+            .Like{
+                background-color:cornflowerblue;
+            }
+            textarea{
+                height: 150px;
+                width: 300px;
+            }
+            .post-content{
+                padding: 10px 10px;
+                font-size: 16px;
+                font-family: 'Times New Roman', Times, serif;
+            }
+            .post{
+                padding: 20px 20px;
+            }
         </style>
     </head>
     <body>
         <h1>Blog</h1>
+        <div class="w3-display-topright Links">
+            {% if isLoggedIn %}
+                <a href="{%url 'signout'%}">Sign Out</a>
+            {%else%}
+                <a href="{%url 'LogIn'%}">Log In</a>
+                <a href="{%url 'SignUp'%}">Sign Up</a>
+            {%endif%}
+        </div>
         {% if isAdmin%}
-            <div id="NewPost">
-                <input type="text" id="newpost-title" placeholder="Title" name="title"/><br/>
+            <div id="NewPost" class="w3-container">
+                <h3>Create A New Post</h3>
+                <input type="text" id="newpost-title" placeholder="Title" name="title"/><br/><br/>
                 <textarea id="newpost-content">
 
                 </textarea><br/>
-                <button id="newpost-submit">Create New Post</button>
+                <button id="newpost-submit" class="w3-btn w3-blue">Create New Post</button>
             </div>
         {%endif%}
         <div id="Posts">
             {% for post in posts %}
-                <div class="post" id="{{post.id}}">
-                    <h3>{{post.Title}}</h3>
+                <div class="post w3-container" id="post-{{post.id}}">
+                    <h3 id="posttitle-{{post.id}}">{{post.Title}}</h3>
                     <div class="post-content" id="content-{{post.id}}">
                         {{post.Content}}
                     </div>
                     <div class="vote">
                         {% if isLoggedIn %}
-                            <button class='{{post.id|get_status:"request.session.email"}}' id="like-{{post.id}}">{{post.id|get_status:"request.session.email"}}</button>
+                            <button class='{{post.id|get_status:request.session.email}} w3-btn' id="like-{{post.id}}">{{post.id|get_status:request.session.email}}</button>
                         {% else %}
                             <span class='blockedlike' title="Log In To Vote">Like</span>
                         {% endif %}
-                        <span class="num-likes" id="numlikes-{{post.id}}">{{post.Likes}}</span>
-                        <span class="date">{{post.Date}}</span>
+                        (<span class="num-likes" id="numlikes-{{post.id}}">{{post.Likes}}</span>)
+                        <span class="date">{{post.Date|gettime}}</span>
                     </div>
                     {% if isAdmin %}
                         <div class="adminpanel">
-                            <span class="admin-item edit" id="edit-{{post.id}}">
-                                Edit
-                            </span>
-                            <span class="admin-item delete" id="delete-{{post.id}}">
-                                Delete
-                            </span>
+                            <span class="admin-item edit" id="edit-{{post.id}}">Edit</span>
+                            <span class="admin-item delete" id="delete-{{post.id}}">Delete</span>
+                                
                         </div>
                     {% endif %}
                 </div>
@@ -84,76 +127,71 @@
                 
                 {% if isAdmin %}
                     $(".edit").click(function(){
+                        // Trigger Edit Mode
                         var post_id = this.id.split('-')[1];
                         var old_content = $("#content-"+post_id).html();
-                        var new_content = "<textarea class='editpost' id='editpost-"+post_id+"'>"+old_content+"</textarea><button class='savebtn' id='savebtn-"+post_id+"'>Done</button>";
+                        var new_content = "<textarea class='editpost' id='editpost-"+post_id+"'>"+old_content+"</textarea><br/><button class='w3-btn' onclick='editthispost(this.id)' id='savebtn-"+post_id+"'>Done</button>";
                         $("#content-"+post_id).html(new_content);
+                        $("#posttitle-"+post_id).html("<input type='text' value='"+$("#posttitle-"+post_id).html()+"' id='edittitle-"+post_id+"'/>");
                     });
-                    $(".savebtn").click(function(){
-                        alert('Haha');
-                        var post_id = this.id.split('-')[1];
+                    function editthispost(argument){
+                        // Edit Post title and content
+                        var post_id = argument.split('-')[1];
                         var new_content = $("#editpost-"+post_id).val();
-                        $.post("{%url 'edit'%}",{'post_id':post_id,'content':new_content},function(data){
+                        $.post("{%url 'edit'%}",{'post_id':post_id,'content':new_content,'title':$("#edittitle-"+post_id).val()},function(data){
                             if(data == SuccessCode){
                                 $("#content-"+post_id).html(new_content);
+                                $("#posttitle-"+post_id).html($("#edittitle-"+post_id).val());
                             }
                             else{
                                 alert();
                             }
                         })
-                    });
+                    }
                     $('.delete').click(function(){
                         var post_id = this.id.split('-')[1];
                         if(confirm("Are You Sure You Want To Delete This?")){
                             $.post("{%url 'delete'%}",{'post_id':post_id},function(data){
                                 if(data == SuccessCode){
                                     // Instead of refreshing, remove contents and hide the post
-                                    $("#content-"+post_id).html("");
-                                    $("#content-"+post_id).css('display','none');
+                                    $("#post-"+post_id).html("");
+                                    $("#post-"+post_id).css('display','none');
                                 }
                             });
                         }
                     });
                     $('#newpost-submit').click(function(){
                         var Data = {"title":$("#newpost-title").val(),"content":$("#newpost-content").val()}
-                        alert($("#newpost-title").val());
                         $.post("{%url 'newpost'%}",Data,function(data){
                             if(data == SuccessCode)
                                 location.reload();
+                            if (data == FaliureCode)
+                                alert('Title Should Be Less Than 40 Characters')
                         })
                     });
                 {%endif%}
-                    
-                $(".Like").click(function(){
-                    var btn = this;
+                function LikeOrUnlike(btn){
                     var post_id = btn.id.split('-')[1];
                     var old_likes = $("#numlikes-"+post_id).html()
                     $.post("{%url 'like'%}",{'post_id':post_id},function(data){
                         if(data == '+1'){
                             btn.innerHTML = "Liked";
-                            $("#numlikes-"+post_id).html(parseInt(old_likes)+1)
+                            $("#numlikes-"+post_id).html(parseInt(old_likes)+1);
+                            btn.style = "background-color:grey"
                         }
                         else{
                             btn.innerHTML = "Like";
                             $("#numlikes-"+post_id).html(parseInt(old_likes)-1)
+                            btn.style = "background-color:cornflowerblue"
                         }
                     });
+                }
+                $(".Like").click(function(){
+                    LikeOrUnlike(this);
                 });
-                /*
-                $(document).ready(function(){
-                    var posts = $('.like');
-                    var post_id;
-                    for(int i=0;i<posts.length;i++){
-                        
-                        post_id = posts[i].id.split('-')[1]
-                        $.post("{%url 'get_vote'%}",{'post_id':post_id},function(data){
-                            posts[i].html(data);
-                        });
-                        
-                        
-                    }
+                $('.Liked').click(function(){
+                    LikeOrUnlike(this);
                 });
-                */
             {%endif%}
         </script>
     </body>

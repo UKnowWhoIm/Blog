@@ -9,8 +9,8 @@ def IndexView(request):
     isAdmin = False
     isLoggedIn = False
     if request.session.get('email',None) is not None:
-            isAdmin = User.objects.get(Email=request.session['email']).IsAdmin
-            isLoggedIn = True
+        isAdmin = User.objects.get(Email=request.session['email']).IsAdmin
+        isLoggedIn = True
     data = {'posts':Post.objects.all().order_by('-Date'),'isAdmin':isAdmin,'isLoggedIn':isLoggedIn}
     return render(request,'BlogApp/Index.html',context=data)
 
@@ -22,14 +22,14 @@ def SignUp(request):
         if request.POST['password'] == '' or request.POST['repassword'] == '' or request.POST['name'] == '':
             # Email has regex to verify it
             return render(request,'BlogApp/SignUp.html',context = {'error':'All Fields Are Required'})
-        if search("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$",request.POST['email']):
+        if not search("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$",request.POST['email']):
             # Email Validation
             return render(request,'BlogApp/SignUp.html',context = {'error':'Email is Invalid'})
-        if User.objects.filter(email=request.POST['email']):
+        if User.objects.filter(Email=request.POST['email']):
             return render(request,'BlogApp/SignUp.html',context = {'error':'Email is Already Used'})
         if request.POST['password'] != request.POST['repassword']:
-            return render(request,'BlogApp/SignUp.html',context = {'error':'Passwords Don\'t match'})
-        user = User.objects.create(Email=request.POST['email'],Name=request.POST['Name'],Password=request.POST['password'])
+            return render(request,'BlogApp/SignUp.html',context = {'error':'Passwords Dont match'})
+        user = User.objects.create(Email=request.POST['email'],Name=request.POST['name'],Password=request.POST['password'])
         user.save()
         request.session['email'] = user.Email
         return HttpResponseRedirect('/')
@@ -72,8 +72,12 @@ def edit(request):
     if request.session.get('email',None) is not None:
         if User.objects.get(Email=request.session['email']).IsAdmin:
             try:
+                max_length = 40
                 current_post = Post.objects.get(id=int(request.POST['post_id']))
-                current_post.content = request.POST['content']
+                if len(request.POST['title']) > max_length:
+                    return HttpResponse(FaliureCode)
+                current_post.Content = request.POST['content']
+                current_post.Title = request.POST['title']
                 current_post.save()
                 return HttpResponse(SuccessCode)
             except Post.DoesNotExist:
@@ -91,19 +95,10 @@ def delete(request):
             except Post.DoesNotExist:
                 return HttpResponse(UnknownErrorCode)
     return HttpResponse(UnknownErrorCode)
-            
-def get_vote_status(request):
-    # Know if user has voted a post
-    if request.session.get('email',None) is None:
-        return HttpResponse('Like')
-    current_post = Post.objects.get(id=request.POST['post_id'])
-    if current_post.Votes.filter(Email = request.session['email']):
-        return HttpReponse('Liked')
-    return HttpResponse('Like')
 
 def newpost(request):
-    #
-    max_length = 20
+    
+    max_length = 40
     if request.POST['title'] == '' or request.POST['content'] == '':
         return HttpResponse(FaliureCode)
     if len(request.POST['title']) > max_length:
@@ -112,3 +107,7 @@ def newpost(request):
     post = Post.objects.create(Title=request.POST['title'],Content=request.POST['content'],Author=user,Date=timezone.now())
     post.save()
     return HttpResponse(SuccessCode)
+
+def SignOut(request):
+    request.session.flush()
+    return HttpResponseRedirect('/')

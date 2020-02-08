@@ -1,16 +1,28 @@
 <!DOCTYPE html>
 <html>
+    {%load static%}
     <head>
         <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+        <link rel="stylesheet" href="{%static 'style.css'%}"/>
         <title>Log In</title>
     </head>
     <body>
-        <form method="POST" action="{%url 'LogIn'%}">
+        <h1>Log In</h1>
+        <div class="w3-display-topright Links">
+            <a href="{%url 'LogIn'%}">Log In</a>
+            <a href="{%url 'home'%}">Blog</a>
+        </div>
+        <form method="POST" class="w3-container" action="{%url 'LogIn'%}">
             {%csrf_token%}
-            <input type="text" name="email" placeholder="Email" required/>
-            <input type="password" name="password" placeholder="Password" required/>
-            <input type="submit" value="Log In"/>
+            <input type="text" name="email" placeholder="Email" required/><br/><br/>
+            <input type="password" name="password" placeholder="Password" required/><br/><br/>
+            <input type="submit" value="Log In" class="w3-btn w3-blue"/>
         </form>
         <script src="{%static 'common.js'%}"></script>
+        <script>
+            {%if error%}
+                alert("{{error}}");
+            {%endif%}
+        </script>
     </body>
 </html>
