@@ -13,3 +13,4 @@ class Post(models.Model):
     Author = models.ForeignKey(User,on_delete=models.CASCADE)
     Date = models.DateTimeField('Date')
     Likes = models.IntegerField(default=0)
+    Votes = models.ManyToManyField(User,related_name='Votes')    

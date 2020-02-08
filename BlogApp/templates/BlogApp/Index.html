@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+    {%load static%}
+    {%load blogextras%}
+    <head>
+        <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+        <title>Blog</title>
+        <style>
+            
+        </style>
+    </head>
+    <body>
+        <h1>Blog</h1>
+        {% if isAdmin%}
+            <div id="NewPost">
+                <input type="text" id="newpost-title" placeholder="Title" name="title"/><br/>
+                <textarea id="newpost-content">
+
+                </textarea><br/>
+                <button id="newpost-submit">Create New Post</button>
+            </div>
+        {%endif%}
+        <div id="Posts">
+            {% for post in posts %}
+                <div class="post" id="{{post.id}}">
+                    <h3>{{post.Title}}</h3>
+                    <div class="post-content" id="content-{{post.id}}">
+                        {{post.Content}}
+                    </div>
+                    <div class="vote">
+                        {% if isLoggedIn %}
+                            <button class='{{post.id|get_status:"request.session.email"}}' id="like-{{post.id}}">{{post.id|get_status:"request.session.email"}}</button>
+                        {% else %}
+                            <span class='blockedlike' title="Log In To Vote">Like</span>
+                        {% endif %}
+                        <span class="num-likes" id="numlikes-{{post.id}}">{{post.Likes}}</span>
+                        <span class="date">{{post.Date}}</span>
+                    </div>
+                    {% if isAdmin %}
+                        <div class="adminpanel">
+                            <span class="admin-item edit" id="edit-{{post.id}}">
+                                Edit
+                            </span>
+                            <span class="admin-item delete" id="delete-{{post.id}}">
+                                Delete
+                            </span>
+                        </div>
+                    {% endif %}
+                </div>
+            {%endfor%}
+        </div>
+        <script src="{%static 'common.js'%}"></script>
+        <script>
+            {%if isLoggedIn%}
+                // GET CSRF Token 
+                function getCookie(name) {
+                    var cookieValue = null;
+                    if (document.cookie && document.cookie !== '') {
+                        var cookies = document.cookie.split(';');
+                        for (var i = 0; i < cookies.length; i++) {
+                            var cookie = cookies[i].trim();
+                            // Does this cookie string begin with the name we want?
+                            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                break;
+                            }
+                        }
+                    }
+                    return cookieValue;
+                }
+                var csrftoken = getCookie('csrftoken');
+                function csrfSafeMethod(method) {
+                    // these HTTP methods do not require CSRF protection
+                    return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+                }
+                $.ajaxSetup({
+                    beforeSend: function(xhr, settings) {
+                        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                            xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                        }
+                    }
+                });
+                
+                {% if isAdmin %}
+                    $(".edit").click(function(){
+                        var post_id = this.id.split('-')[1];
+                        var old_content = $("#content-"+post_id).html();
+                        var new_content = "<textarea class='editpost' id='editpost-"+post_id+"'>"+old_content+"</textarea><button class='savebtn' id='savebtn-"+post_id+"'>Done</button>";
+                        $("#content-"+post_id).html(new_content);
+                    });
+                    $(".savebtn").click(function(){
+                        alert('Haha');
+                        var post_id = this.id.split('-')[1];
+                        var new_content = $("#editpost-"+post_id).val();
+                        $.post("{%url 'edit'%}",{'post_id':post_id,'content':new_content},function(data){
+                            if(data == SuccessCode){
+                                $("#content-"+post_id).html(new_content);
+                            }
+                            else{
+                                alert();
+                            }
+                        })
+                    });
+                    $('.delete').click(function(){
+                        var post_id = this.id.split('-')[1];
+                        if(confirm("Are You Sure You Want To Delete This?")){
+                            $.post("{%url 'delete'%}",{'post_id':post_id},function(data){
+                                if(data == SuccessCode){
+                                    // Instead of refreshing, remove contents and hide the post
+                                    $("#content-"+post_id).html("");
+                                    $("#content-"+post_id).css('display','none');
+                                }
+                            });
+                        }
+                    });
+                    $('#newpost-submit').click(function(){
+                        var Data = {"title":$("#newpost-title").val(),"content":$("#newpost-content").val()}
+                        alert($("#newpost-title").val());
+                        $.post("{%url 'newpost'%}",Data,function(data){
+                            if(data == SuccessCode)
+                                location.reload();
+                        })
+                    });
+                {%endif%}
+                    
+                $(".Like").click(function(){
+                    var btn = this;
+                    var post_id = btn.id.split('-')[1];
+                    var old_likes = $("#numlikes-"+post_id).html()
+                    $.post("{%url 'like'%}",{'post_id':post_id},function(data){
+                        if(data == '+1'){
+                            btn.innerHTML = "Liked";
+                            $("#numlikes-"+post_id).html(parseInt(old_likes)+1)
+                        }
+                        else{
+                            btn.innerHTML = "Like";
+                            $("#numlikes-"+post_id).html(parseInt(old_likes)-1)
+                        }
+                    });
+                });
+                /*
+                $(document).ready(function(){
+                    var posts = $('.like');
+                    var post_id;
+                    for(int i=0;i<posts.length;i++){
+                        
+                        post_id = posts[i].id.split('-')[1]
+                        $.post("{%url 'get_vote'%}",{'post_id':post_id},function(data){
+                            posts[i].html(data);
+                        });
+                        
+                        
+                    }
+                });
+                */
+            {%endif%}
+        </script>
+    </body>
+</html>
